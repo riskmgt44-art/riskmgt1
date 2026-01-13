@@ -1,0 +1,239 @@
+<!-- frontend/invite-team.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invite Team • RiskMGT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #5DA1A1;
+      --primary-hover: #4e9393;
+      --text-primary: #111111;
+      --text-secondary: #666666;
+      --border: #d1d5db;
+      --bg: #ffffff;
+      --surface: #f9fafb;
+      --shadow: 0 4px 20px rgba(0,0,0,0.05);
+      --success: #10b981;
+      --error: #ef4444;
+      --placeholder: #9ca3af;
+      --toast-bg: #ffffff;
+      --toast-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+    .logo { width: 40px; height: 40px; }
+    .logout { padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; cursor: pointer; font-weight: 500; }
+    .title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .subtitle { font-size: 15px; color: var(--text-secondary); margin-bottom: 32px; }
+    .section { background: var(--surface); border-radius: 16px; padding: 24px; margin-bottom: 32px; box-shadow: var(--shadow); }
+    .form-group { margin-bottom: 16px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; align-items: center; }
+    .form-group label { display: none; } /* Hidden for row headers */
+    input, select { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 999px; font-size: 14px; }
+    input:focus, select:focus { outline: none; border-color: var(--primary); }
+    .add-btn { padding: 12px 24px; background: var(--primary); color: white; border: none; border-radius: 999px; cursor: pointer; font-weight: 600; }
+    .add-btn:hover { background: var(--primary-hover); }
+    .remove-btn { background: #f3f4f6; color: var(--text-secondary); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 18px; }
+    .csv-upload { margin: 24px 0; }
+    .submit-btn { padding: 16px; width: 100%; background: var(--primary); color: white; border: none; border-radius: 999px; font-weight: 600; cursor: pointer; }
+    .submit-btn:hover { background: var(--primary-hover); }
+    .user-list { margin-top: 40px; }
+    .user-table { width: 100%; border-collapse: collapse; }
+    .user-table th, .user-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    .toast-container { position: fixed; top: 24px; right: 24px; z-index: 1000; }
+    .toast { background: var(--toast-bg); border-radius: 12px; box-shadow: var(--toast-shadow); padding: 14px 18px; display: flex; align-items: center; gap: 12px; opacity: 0; transform: translateX(120%); transition: all 0.35s; border-left: 4px solid var(--success); }
+    .toast.error { border-left-color: var(--error); }
+    .toast.show { opacity: 1; transform: translateX(0); }
+    .toast-message { font-size: 15px; font-weight: 500; }
+    .success-actions { margin-top: 24px; display: flex; gap: 16px; justify-content: center; }
+    .btn-dashboard, .btn-more { padding: 14px 32px; border-radius: 999px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-dashboard { background: var(--primary); color: white; }
+    .btn-dashboard:hover { background: var(--primary-hover); }
+    .btn-more { background: #e5e7eb; color: var(--text-primary); }
+    .btn-more:hover { background: #d1d5db; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="assets/images/logo.png" alt="RiskMGT" class="logo">
+      <button class="logout" onclick="logout()">Logout</button>
+    </header>
+
+    <h1 class="title">Invite Team Members</h1>
+    <p class="subtitle">Add users manually or upload a CSV file. Roles: admin, user, viewer.</p>
+
+    <div class="section">
+      <h3>Manual Entry</h3>
+      <div id="userRows">
+        <div class="form-group header">
+          <label>First Name</label><label>Last Name</label><label>Email</label><label>Job Title</label><label>Role</label>
+        </div>
+        <!-- Dynamic rows here -->
+      </div>
+      <button class="add-btn" onclick="addRow()">Add User</button>
+
+      <div class="csv-upload">
+        <h3>Or Upload CSV</h3>
+        <input type="file" id="csvFile" accept=".csv">
+      </div>
+
+      <button class="submit-btn" onclick="submitUsers()">Invite Users</button>
+
+      <!-- Success choice buttons (shown only after successful invite) -->
+      <div id="successActions" class="success-actions hidden">
+        <button class="btn-dashboard" onclick="goToDashboard()">Continue to Dashboard</button>
+        <button class="btn-more" onclick="continueInviting()">Invite More Users</button>
+      </div>
+    </div>
+
+    <div class="user-list">
+      <h3>Current Users</h3>
+      <table class="user-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Job Title</th><th>Role</th></tr></thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<div class="toast-message">${message}</div>`;
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 5000);
+    }
+
+    function addRow(data = { firstName: '', lastName: '', email: '', jobTitle: '', role: 'user' }) {
+      const row = document.createElement('div');
+      row.className = 'form-group';
+      row.innerHTML = `
+        <input type="text" placeholder="First Name" value="${data.firstName}" required>
+        <input type="text" placeholder="Last Name" value="${data.lastName}" required>
+        <input type="email" placeholder="Email" value="${data.email}" required>
+        <input type="text" placeholder="Job Title" value="${data.jobTitle}" required>
+        <select>
+          <option value="admin" ${data.role === 'admin' ? 'selected' : ''}>Admin</option>
+          <option value="user" ${data.role === 'user' ? 'selected' : ''}>User</option>
+          <option value="viewer" ${data.role === 'viewer' ? 'selected' : ''}>Viewer</option>
+        </select>
+        <button class="remove-btn" onclick="this.parentElement.remove()">-</button>
+      `;
+      document.getElementById('userRows').appendChild(row);
+    }
+
+    function getUsersFromForm() {
+      const rows = document.querySelectorAll('#userRows .form-group:not(.header)');
+      return Array.from(rows).map(row => {
+        const inputs = row.querySelectorAll('input, select');
+        return {
+          firstName: inputs[0].value.trim(),
+          lastName: inputs[1].value.trim(),
+          email: inputs[2].value.trim(),
+          jobTitle: inputs[3].value.trim(),
+          role: inputs[4].value,
+          passwordHash: '' // Backend will generate if empty
+        };
+      }).filter(user => user.firstName && user.lastName && user.email && user.jobTitle);
+    }
+
+    function parseCSV(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const lines = e.target.result.split('\n').slice(1); // Skip header
+          const users = lines.map(line => {
+            const [firstName, lastName, email, jobTitle, role] = line.split(',');
+            return { firstName, lastName, email, jobTitle, role: role?.trim() || 'user' };
+          }).filter(u => u.firstName && u.email);
+          resolve(users);
+        };
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+    }
+
+    async function submitUsers() {
+      let users = getUsersFromForm();
+      const csvFile = document.getElementById('csvFile').files[0];
+      if (csvFile) {
+        const csvUsers = await parseCSV(csvFile);
+        users = [...users, ...csvUsers];
+      }
+      if (!users.length) return showToast('Add at least one user', 'error');
+
+      const token = localStorage.getItem('token');
+      if (!token) return showToast('Please login first', 'error');
+
+      fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(users)
+      })
+      .then(res => res.json().then(data => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) throw new Error(data.message || 'Failed to invite users');
+        showToast('Users invited successfully!', 'success');
+
+        // Show choice buttons instead of auto-redirect
+        document.getElementById('successActions').classList.remove('hidden');
+
+        // Optional: still refresh list immediately
+        loadUsers();
+
+        // Clear form for next batch if they choose to continue inviting
+        document.getElementById('userRows').innerHTML = '<div class="form-group header"><label>First Name</label><label>Last Name</label><label>Email</label><label>Job Title</label><label>Role</label></div>';
+        document.getElementById('csvFile').value = '';
+      })
+      .catch(err => showToast(err.message, 'error'));
+    }
+
+    function goToDashboard() {
+      window.location.href = '/dashboards/executive/index.html';
+    }
+
+    function continueInviting() {
+      document.getElementById('successActions').classList.add('hidden');
+      addRow(); // Add a new empty row to encourage more invites
+      showToast('Add more users or upload another CSV', 'success');
+    }
+
+    function loadUsers() {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      fetch('/api/users', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(users => {
+        const tbody = document.getElementById('userTableBody');
+        tbody.innerHTML = users.map(u => `<tr><td>${u.firstName} ${u.lastName}</td><td>${u.email}</td><td>${u.jobTitle}</td><td>${u.role}</td></tr>`).join('');
+      })
+      .catch(() => showToast('Failed to load users', 'error'));
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = '/login.html'; // Adjust to your login page
+    }
+
+    // Initial load
+    if (!localStorage.getItem('token')) window.location.href = '/login.html';
+    addRow(); // Add first empty row
+    loadUsers();
+  </script>
+</body>
+</html>
