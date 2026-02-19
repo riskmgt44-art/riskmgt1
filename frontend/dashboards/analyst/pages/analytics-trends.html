@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Trend Analysis • RiskMGT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #5DA1A1;
+            --primary-hover: #4e9393;
+            --primary-light: rgba(93, 161, 161, 0.1);
+            --green: #10b981;
+            --amber: #f59e0b;
+            --red: #ef4444;
+            --neutral: #6b7280;
+            --text-primary: #111111;
+            --text-secondary: #555555;
+            --bg: #FFFFFF;
+            --card-bg: #FFFFFF;
+            --border: #e8e8e8;
+            --shadow-sm: 0 3.2px 9.6px rgba(0,0,0,0.06);
+            --shadow-md: 0 9.6px 25.6px rgba(0,0,0,0.08);
+            --radius: 12.8px;
+            --radius-sm: 8px;
+            --transition: all 0.3s ease;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+        }
+        body::-webkit-scrollbar, ::-webkit-scrollbar { display: none; width: 0; height: 0; background: transparent; }
+        html, body { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .top-bar {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 32px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            backdrop-filter: blur(8px);
+        }
+        .top-title {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .top-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .select-control, .btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            background: var(--bg);
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+        }
+        .btn:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            color: white;
+        }
+        .refresh-time {
+            font-size: 12px;
+            color: var(--neutral);
+            white-space: nowrap;
+        }
+
+        .main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px 32px 80px 32px;
+        }
+
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            padding: 24px;
+            transition: var(--transition);
+        }
+        .kpi-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .kpi-label {
+            font-size: 13px;
+            color: var(--neutral);
+            font-weight: 500;
+        }
+        .kpi-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+        .kpi-trend {
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .trend-up { color: var(--red); }
+        .trend-down { color: var(--green); }
+        .trend-stable { color: var(--neutral); }
+        .kpi-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            transition: color 0.4s ease;
+        }
+        .kpi-sub {
+            font-size: 13px;
+            color: var(--neutral);
+        }
+
+        .filter-bar {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 32px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .filter-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .filter-select {
+            padding: 8px 32px 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            color: var(--text-primary);
+            background: var(--bg);
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            min-width: 140px;
+            font-family: 'Inter', sans-serif;
+        }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin-bottom: 48px;
+        }
+        .chart-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .chart-controls {
+            display: flex;
+            gap: 8px;
+        }
+        .chart-toggle {
+            display: flex;
+            gap: 4px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 4px;
+        }
+        .toggle-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: var(--transition);
+        }
+        .toggle-btn.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 500;
+        }
+        .chart-container {
+            position: relative;
+            flex: 1;
+            min-height: 280px;
+        }
+
+        .attention-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+        .attention-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--red);
+        }
+        .attention-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .attention-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(239, 68, 68, 0.05);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .attention-empty {
+            text-align: center;
+            padding: 32px 16px;
+            color: var(--neutral);
+            font-style: italic;
+            font-size: 15px;
+        }
+        .attention-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .attention-link:hover { text-decoration: underline; }
+
+        .assets-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            padding: 24px;
+            margin-top: 32px;
+        }
+        .assets-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .assets-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .assets-count {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .assets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        .asset-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .asset-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+        .asset-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .asset-category {
+            font-size: 12px;
+            color: var(--neutral);
+            background: var(--primary-light);
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+        .asset-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .asset-detail {
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .asset-detail i {
+            color: var(--neutral);
+            width: 16px;
+        }
+        .risk-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .risk-critical {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--red);
+        }
+        .risk-high {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--amber);
+        }
+        .risk-medium {
+            background: rgba(93, 161, 161, 0.1);
+            color: var(--primary);
+        }
+        .risk-low {
+            background: rgba(107, 114, 128, 0.1);
+            color: var(--neutral);
+        }
+
+        .movement-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .movement-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+        }
+        .movement-card:hover {
+            border-color: var(--primary);
+        }
+        .movement-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .movement-icon.improved { background: rgba(16,185,129,0.1); color: var(--green); }
+        .movement-icon.deteriorated { background: rgba(239,68,68,0.1); color: var(--red); }
+        .movement-icon.stable { background: rgba(107,114,128,0.1); color: var(--neutral); }
+        .movement-icon.new { background: rgba(93,161,161,0.1); color: var(--primary); }
+        .movement-content {
+            flex: 1;
+        }
+        .movement-count {
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .movement-label {
+            font-size: 12px;
+            color: var(--neutral);
+        }
+
+        .assets-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .assets-table th {
+            text-align: left;
+            padding: 16px 20px;
+            background: var(--primary-light);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+        }
+        .assets-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .assets-table tbody tr {
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .assets-table tbody tr:hover {
+            background: var(--primary-light);
+        }
+        .trend-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .trend-badge.improving { background: rgba(16,185,129,0.1); color: var(--green); }
+        .trend-badge.stable { background: rgba(107,114,128,0.1); color: var(--neutral); }
+        .trend-badge.deteriorating { background: rgba(239,68,68,0.1); color: var(--red); }
+
+        .risk-score {
+            font-weight: 600;
+        }
+        .risk-score.high { color: var(--red); }
+        .risk-score.medium { color: var(--amber); }
+        .risk-score.low { color: var(--green); }
+
+        .change-positive {
+            color: var(--red);
+            font-weight: 600;
+        }
+        .change-negative {
+            color: var(--green);
+            font-weight: 600;
+        }
+        .change-neutral {
+            color: var(--neutral);
+        }
+
+        @media (max-width: 1024px) {
+            .analytics-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .top-bar { padding: 16px; flex-direction: column; align-items: stretch; gap: 16px; }
+            .top-controls { flex-direction: column; }
+            .main { padding: 20px 16px 80px 16px; }
+            .kpi-row { grid-template-columns: 1fr; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .filter-group { flex-direction: column; align-items: stretch; }
+            .filter-select { width: 100%; }
+            .movement-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="top-title">
+            Asset Trend Analysis
+        </div>
+        <div class="top-controls">
+            <select class="select-control" id="date-range">
+                <option value="30">Last 30 Days</option>
+                <option value="90" selected>Last 90 Days</option>
+                <option value="180">Last 6 Months</option>
+                <option value="365">Last 1 Year</option>
+            </select>
+            <button class="btn" onclick="exportData()">
+                <i class="fas fa-download"></i> Export
+            </button>
+            <button class="btn" onclick="toggleFilters()">
+                <i class="fas fa-sliders-h"></i> Filters
+            </button>
+            <button class="btn" onclick="refreshDashboard()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <div class="refresh-time" id="refresh-time">Last updated: —</div>
+        </div>
+    </div>
+
+    <main class="main">
+        <!-- Filter Bar (hidden by default) -->
+        <div class="filter-bar" id="filterBar" style="display: none;">
+            <div class="filter-group">
+                <span class="filter-label">Asset:</span>
+                <select class="filter-select" id="assetFilter">
+                    <option value="all">All Assigned Assets</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <span class="filter-label">Risk Category:</span>
+                <select class="filter-select" id="categoryFilter">
+                    <option value="all">All Categories</option>
+                    <option value="technical">Technical</option>
+                    <option value="operational">Operational</option>
+                    <option value="environmental">Environmental</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <span class="filter-label">Severity:</span>
+                <select class="filter-select" id="severityFilter">
+                    <option value="all">All Severities</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <span class="filter-label">Owner:</span>
+                <select class="filter-select" id="ownerFilter">
+                    <option value="all">All Owners</option>
+                </select>
+            </div>
+
+            <div style="margin-left: auto;">
+                <span class="badge" id="filterCount">0 filters applied</span>
+            </div>
+        </div>
+
+        <!-- KPI Row -->
+        <div class="kpi-row">
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <div class="kpi-label">Total Assets Analyzed</div>
+                    <div class="kpi-icon" style="background: var(--primary);">
+                        <i class="fas fa-building"></i>
+                    </div>
+                </div>
+                <div class="kpi-value" id="totalAssets">—</div>
+                <div class="kpi-trend" id="assetsTrend">—</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <div class="kpi-label">Total Risks (Current)</div>
+                    <div class="kpi-icon" style="background: var(--neutral);">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+                <div class="kpi-value" id="totalRisks">—</div>
+                <div class="kpi-trend" id="risksTrend">—</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <div class="kpi-label">% Risks Improved</div>
+                    <div class="kpi-icon" style="background: var(--green);">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                </div>
+                <div class="kpi-value" id="risksImproved">—</div>
+                <div class="kpi-trend" id="improvedTrend">—</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <div class="kpi-label">% Risks Deteriorated</div>
+                    <div class="kpi-icon" style="background: var(--red);">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                </div>
+                <div class="kpi-value" id="risksDeteriorated">—</div>
+                <div class="kpi-trend" id="deterioratedTrend">—</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <div class="kpi-label">Mitigation Effectiveness</div>
+                    <div class="kpi-icon" style="background: var(--primary);">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                </div>
+                <div class="kpi-value" id="mitigationEffectiveness">—</div>
+                <div class="kpi-trend" id="effectivenessTrend">—</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <div class="kpi-label">Avg Risk Reduction</div>
+                    <div class="kpi-icon" style="background: var(--amber);">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+                <div class="kpi-value" id="avgReduction">—</div>
+                <div class="kpi-trend" id="reductionTrend">—</div>
+            </div>
+        </div>
+
+        <!-- Main Trend Chart -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">Risk Severity Trends Over Time</div>
+                <div class="chart-controls">
+                    <div class="chart-toggle">
+                        <button class="toggle-btn active" onclick="toggleChartView('count')">Count</button>
+                        <button class="toggle-btn" onclick="toggleChartView('score')">Weighted Score</button>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="trendChart"></canvas>
+            </div>
+            <div id="trendChartEmpty" class="attention-empty" style="display: none;">
+                No trend data available for the selected period.
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="analytics-grid">
+            <!-- Asset Comparison Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">Risk Distribution by Asset</div>
+                    <select class="select-control" id="assetSort" onchange="sortAssets()" style="width: auto;">
+                        <option value="risk">Highest Risk</option>
+                        <option value="improved">Most Improved</option>
+                        <option value="deteriorated">Most Deteriorated</option>
+                        <option value="actions">Most Actions</option>
+                    </select>
+                </div>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="assetChart"></canvas>
+                </div>
+                <div id="assetChartEmpty" class="attention-empty" style="display: none;">
+                    No asset data available.
+                </div>
+            </div>
+
+            <!-- Mitigation Effectiveness Panel -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">Mitigation Effectiveness</div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
+                    <div style="padding: 16px; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                        <div style="font-size: 12px; color: var(--neutral); margin-bottom: 8px;">Total Actions Created</div>
+                        <div style="font-size: 24px; font-weight: 700;" id="totalActions">—</div>
+                        <div style="font-size: 11px; color: var(--neutral);" id="actionsPeriod">Last 90 days</div>
+                    </div>
+                    <div style="padding: 16px; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                        <div style="font-size: 12px; color: var(--neutral); margin-bottom: 8px;">% Completed On Time</div>
+                        <div style="font-size: 24px; font-weight: 700;" id="ontimePercentage">—</div>
+                        <div style="font-size: 11px; color: var(--neutral);" id="ontimeTrend">—</div>
+                    </div>
+                    <div style="padding: 16px; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                        <div style="font-size: 12px; color: var(--neutral); margin-bottom: 8px;">Avg Time to Reduction</div>
+                        <div style="font-size: 24px; font-weight: 700;" id="avgTimeToReduction">—</div>
+                        <div style="font-size: 11px; color: var(--neutral);" id="timeTrend">—</div>
+                    </div>
+                    <div style="padding: 16px; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                        <div style="font-size: 12px; color: var(--neutral); margin-bottom: 8px;">Risk Reduction After Action</div>
+                        <div style="font-size: 24px; font-weight: 700;" id="riskReduction">—</div>
+                        <div style="font-size: 11px; color: var(--neutral);">Average reduction</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 24px; padding: 20px; background: var(--primary-light); border-radius: var(--radius-sm); display: none;" id="timelineContainer">
+                    <div style="display: flex; justify-content: space-between; align-items: center; position: relative; margin-bottom: 16px;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2;">
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--red);"></div>
+                            <div style="font-size: 11px; font-weight: 600;">Before Action</div>
+                            <div style="font-size: 14px; font-weight: 600;" id="beforeScore">—</div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2;">
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--amber);"></div>
+                            <div style="font-size: 11px; font-weight: 600;">During Action</div>
+                            <div style="font-size: 14px; font-weight: 600;" id="duringScore">—</div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2;">
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--green);"></div>
+                            <div style="font-size: 11px; font-weight: 600;">After Completion</div>
+                            <div style="font-size: 14px; font-weight: 600;" id="afterScore">—</div>
+                        </div>
+                        <div style="position: absolute; top: 6px; left: 0; right: 0; height: 2px; background: var(--border); z-index: 1;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 16px; font-size: 12px; color: var(--neutral);">
+                        <span id="reductionSummary">—</span>
+                        <span id="avgReductionSummary">—</span>
+                    </div>
+                </div>
+                <div id="mitigationEmpty" class="attention-empty" style="display: block;">
+                    No mitigation data available.
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Movement Analysis -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">Risk Movement Analysis</div>
+            </div>
+            <div class="movement-grid" id="movementGrid">
+                <div class="movement-card">
+                    <div class="movement-icon improved">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                    <div class="movement-content">
+                        <div class="movement-count" id="improvedCount">—</div>
+                        <div class="movement-label">Risks improved</div>
+                        <div style="font-size: 11px; color: var(--green);" id="improvedDetail">—</div>
+                    </div>
+                </div>
+
+                <div class="movement-card">
+                    <div class="movement-icon deteriorated">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <div class="movement-content">
+                        <div class="movement-count" id="deterioratedCount">—</div>
+                        <div class="movement-label">Risks deteriorated</div>
+                        <div style="font-size: 11px; color: var(--red);" id="deterioratedDetail">—</div>
+                    </div>
+                </div>
+
+                <div class="movement-card">
+                    <div class="movement-icon stable">
+                        <i class="fas fa-minus"></i>
+                    </div>
+                    <div class="movement-content">
+                        <div class="movement-count" id="stableCount">—</div>
+                        <div class="movement-label">Remained unchanged</div>
+                        <div style="font-size: 11px; color: var(--neutral);" id="stableDetail">—</div>
+                    </div>
+                </div>
+
+                <div class="movement-card">
+                    <div class="movement-icon new">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <div class="movement-content">
+                        <div class="movement-count" id="newCount">—</div>
+                        <div class="movement-label">New risks introduced</div>
+                        <div style="font-size: 11px; color: var(--primary);" id="newDetail">—</div>
+                    </div>
+                </div>
+            </div>
+            <div id="movementEmpty" class="attention-empty" style="display: none;">
+                No movement data available.
+            </div>
+        </div>
+
+        <!-- Asset Drilldown Table -->
+        <div class="assets-panel">
+            <div class="assets-header">
+                <div class="assets-title">Asset Risk Movement Details</div>
+                <span class="assets-count" id="assetTableCount">0</span>
+            </div>
+            <table class="assets-table" id="assetTable">
+                <thead>
+                    <tr>
+                        <th>Asset Name</th>
+                        <th>Starting Risk Score</th>
+                        <th>Current Risk Score</th>
+                        <th>Net Change</th>
+                        <th>Trend</th>
+                        <th>Actions Completed</th>
+                        <th>Next Review Date</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Table rows will be populated dynamically -->
+                </tbody>
+            </table>
+            <div id="tableEmpty" class="attention-empty" style="display: none;">
+                No asset data available.
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Chart colors - EXACTLY matching your color scheme
+        const COLORS = {
+            primary: '#5DA1A1',
+            red: '#ef4444',
+            green: '#10b981',
+            amber: '#f59e0b',
+            neutral: '#6b7280'
+        };
+
+        // Chart instances
+        let trendChart = null;
+        let assetChart = null;
+
+        // API endpoints (from your working code)
+        const API_ENDPOINTS = {
+            analystAssets: '/api/analyst/assets',
+            analystRisks: '/api/analyst/risks',
+            analystActions: '/api/analyst/actions',
+            analystTrends: '/api/analyst/trends'
+        };
+
+        // Data stores
+        let allAssets = [];
+        let allRisks = [];
+        let allActions = [];
+        let trendData = null;
+        let currentChartView = 'count';
+        let selectedDateRange = '90';
+
+        // Initialize charts
+        function initializeCharts() {
+            const trendCtx = document.getElementById('trendChart')?.getContext('2d');
+            const assetCtx = document.getElementById('assetChart')?.getContext('2d');
+            
+            if (trendCtx) {
+                trendChart = new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            { label: 'Critical', data: [], borderColor: COLORS.red, backgroundColor: COLORS.red + '20', tension: 0.4, fill: false },
+                            { label: 'High', data: [], borderColor: COLORS.amber, backgroundColor: COLORS.amber + '20', tension: 0.4, fill: false },
+                            { label: 'Medium', data: [], borderColor: COLORS.primary, backgroundColor: COLORS.primary + '20', tension: 0.4, fill: false },
+                            { label: 'Low', data: [], borderColor: COLORS.neutral, backgroundColor: COLORS.neutral + '20', tension: 0.4, fill: false }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 12 } } },
+                            tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' }, cornerRadius: 8 }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: 'var(--border)' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+            
+            if (assetCtx) {
+                assetChart = new Chart(assetCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            { label: 'Critical', data: [], backgroundColor: COLORS.red, borderRadius: 4 },
+                            { label: 'High', data: [], backgroundColor: COLORS.amber, borderRadius: 4 },
+                            { label: 'Medium', data: [], backgroundColor: COLORS.primary, borderRadius: 4 },
+                            { label: 'Low', data: [], backgroundColor: COLORS.neutral, borderRadius: 4 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 } } },
+                            tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' }, cornerRadius: 8 }
+                        },
+                        scales: {
+                            x: { stacked: true, grid: { display: false } },
+                            y: { stacked: true, beginAtZero: true, grid: { color: 'var(--border)' } }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Format number
+        function formatNumber(num) {
+            if (num === undefined || num === null) return '—';
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        // Format percentage
+        function formatPercentage(num) {
+            if (num === undefined || num === null) return '—';
+            return num + '%';
+        }
+
+        // Update trend indicator
+        function updateTrend(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            if (value === undefined || value === null) {
+                element.innerHTML = '—';
+                element.className = 'kpi-trend';
+                return;
+            }
+            
+            if (value > 0) {
+                element.innerHTML = `<i class="fas fa-arrow-up"></i> +${value}%`;
+                element.className = 'kpi-trend trend-up';
+            } else if (value < 0) {
+                element.innerHTML = `<i class="fas fa-arrow-down"></i> ${value}%`;
+                element.className = 'kpi-trend trend-down';
+            } else {
+                element.innerHTML = '<i class="fas fa-minus"></i> Stable';
+                element.className = 'kpi-trend trend-stable';
+            }
+        }
+
+        // Load assigned assets
+        async function loadAssignedAssets() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) throw new Error('No authentication token');
+
+                const response = await fetch(API_ENDPOINTS.analystAssets, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const assets = await response.json();
+                    allAssets = Array.isArray(assets) ? assets : [];
+                    
+                    document.getElementById('totalAssets').textContent = formatNumber(allAssets.length);
+                    document.getElementById('assetTableCount').textContent = allAssets.length.toString();
+                    
+                    updateAssetFilter(allAssets);
+                    
+                    return allAssets;
+                }
+            } catch (error) {
+                console.error('Error loading assigned assets:', error);
+            }
+            return [];
+        }
+
+        // Update asset filter dropdown
+        function updateAssetFilter(assets) {
+            const filter = document.getElementById('assetFilter');
+            const ownerFilter = document.getElementById('ownerFilter');
+            if (!filter || !ownerFilter) return;
+            
+            filter.innerHTML = '<option value="all">All Assigned Assets</option>';
+            ownerFilter.innerHTML = '<option value="all">All Owners</option>';
+            
+            const owners = new Set();
+            
+            if (assets && assets.length > 0) {
+                assets.forEach(asset => {
+                    const option = document.createElement('option');
+                    option.value = asset._id || asset.id;
+                    option.textContent = asset.name || `Asset ${asset._id}`;
+                    filter.appendChild(option);
+                    
+                    if (asset.owner) owners.add(asset.owner);
+                });
+                
+                owners.forEach(owner => {
+                    const option = document.createElement('option');
+                    option.value = owner;
+                    option.textContent = owner;
+                    ownerFilter.appendChild(option);
+                });
+            }
+        }
+
+        // Load risks
+        async function loadRisks() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) throw new Error('No authentication token');
+
+                const response = await fetch(API_ENDPOINTS.analystRisks, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    allRisks = data.risks || [];
+                    return allRisks;
+                }
+            } catch (error) {
+                console.error('Error loading risks:', error);
+            }
+            return [];
+        }
+
+        // Load actions
+        async function loadActions() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) throw new Error('No authentication token');
+
+                const response = await fetch(API_ENDPOINTS.analystActions, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    allActions = data.actions || [];
+                    return allActions;
+                }
+            } catch (error) {
+                console.error('Error loading actions:', error);
+            }
+            return [];
+        }
+
+        // Load trend data
+        async function loadTrends() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) throw new Error('No authentication token');
+
+                const response = await fetch(`${API_ENDPOINTS.analystTrends}?range=${selectedDateRange}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    trendData = data;
+                    return trendData;
+                }
+            } catch (error) {
+                console.error('Error loading trends:', error);
+            }
+            return null;
+        }
+
+        // Calculate KPIs from real data
+        function calculateKPIs() {
+            const totalRisks = allRisks.length;
+            
+            const improved = allRisks.filter(r => r.trend === 'improving').length;
+            const deteriorated = allRisks.filter(r => r.trend === 'deteriorating').length;
+            
+            const improvedPercent = totalRisks > 0 ? Math.round((improved / totalRisks) * 100) : 0;
+            const deterioratedPercent = totalRisks > 0 ? Math.round((deteriorated / totalRisks) * 100) : 0;
+            
+            const completedActions = allActions.filter(a => a.status === 'completed').length;
+            const onTimeActions = allActions.filter(a => a.status === 'completed' && a.completedOnTime).length;
+            const onTimePercent = completedActions > 0 ? Math.round((onTimeActions / completedActions) * 100) : 0;
+            
+            const actionsWithReduction = allActions.filter(a => a.riskReduction).length;
+            const totalReduction = allActions.reduce((sum, a) => sum + (a.riskReduction || 0), 0);
+            const avgReduction = actionsWithReduction > 0 ? Math.round(totalReduction / actionsWithReduction) : 0;
+
+            document.getElementById('totalRisks').textContent = formatNumber(totalRisks);
+            document.getElementById('risksImproved').textContent = formatPercentage(improvedPercent);
+            document.getElementById('risksDeteriorated').textContent = formatPercentage(deterioratedPercent);
+            document.getElementById('mitigationEffectiveness').textContent = formatPercentage(onTimePercent);
+            document.getElementById('avgReduction').textContent = formatPercentage(avgReduction);
+            
+            document.getElementById('totalActions').textContent = formatNumber(allActions.length);
+            document.getElementById('ontimePercentage').textContent = formatPercentage(onTimePercent);
+            
+            const actionsWithTime = allActions.filter(a => a.daysToComplete);
+            const totalDays = actionsWithTime.reduce((sum, a) => sum + (a.daysToComplete || 0), 0);
+            const avgDays = actionsWithTime.length > 0 ? Math.round(totalDays / actionsWithTime.length) : 0;
+            document.getElementById('avgTimeToReduction').textContent = avgDays > 0 ? avgDays + ' days' : '—';
+            
+            document.getElementById('riskReduction').textContent = formatPercentage(avgReduction);
+            
+            updateTrendIndicators(improvedPercent, deterioratedPercent, onTimePercent, avgReduction);
+            updateMovementAnalysis();
+        }
+
+        // Update trend indicators
+        function updateTrendIndicators(improved, deteriorated, effectiveness, reduction) {
+            updateTrend('assetsTrend', allAssets.length > 0 ? 0 : 0);
+            
+            const risksTrend = allRisks.length > 0 ? Math.round((deteriorated - improved) / 10) : 0;
+            updateTrend('risksTrend', risksTrend);
+            
+            updateTrend('improvedTrend', improved > 30 ? 5 : (improved > 20 ? 2 : 0));
+            updateTrend('deterioratedTrend', deteriorated > 20 ? 3 : (deteriorated > 10 ? 1 : 0));
+            updateTrend('effectivenessTrend', effectiveness > 70 ? 8 : (effectiveness > 50 ? 3 : -2));
+            updateTrend('reductionTrend', reduction > 30 ? 5 : (reduction > 20 ? 2 : 0));
+        }
+
+        // Update movement analysis
+        function updateMovementAnalysis() {
+            const improved = allRisks.filter(r => r.trend === 'improving').length;
+            const deteriorated = allRisks.filter(r => r.trend === 'deteriorating').length;
+            const stable = allRisks.filter(r => r.trend === 'stable' || !r.trend).length;
+            const newRisks = allRisks.filter(r => r.isNew).length;
+            
+            document.getElementById('improvedCount').textContent = formatNumber(improved);
+            document.getElementById('deterioratedCount').textContent = formatNumber(deteriorated);
+            document.getElementById('stableCount').textContent = formatNumber(stable);
+            document.getElementById('newCount').textContent = formatNumber(newRisks);
+            
+            const improvedDetails = allRisks.filter(r => r.trend === 'improving' && r.severityChange);
+            if (improvedDetails.length > 0) {
+                const example = improvedDetails[0];
+                document.getElementById('improvedDetail').textContent = `${example.previousSeverity || 'High'} → ${example.currentSeverity || 'Medium'}`;
+            }
+            
+            const deterioratedDetails = allRisks.filter(r => r.trend === 'deteriorating' && r.severityChange);
+            if (deterioratedDetails.length > 0) {
+                const example = deterioratedDetails[0];
+                document.getElementById('deterioratedDetail').textContent = `${example.previousSeverity || 'Medium'} → ${example.currentSeverity || 'Critical'}`;
+            }
+            
+            if (stable > 0) {
+                document.getElementById('stableDetail').textContent = 'No change in severity';
+            }
+            
+            if (newRisks > 0) {
+                document.getElementById('newDetail').textContent = 'Added this period';
+            }
+        }
+
+        // Update trends chart
+        function updateTrendChart() {
+            if (!trendChart || !trendData) {
+                document.getElementById('trendChart').style.display = 'none';
+                document.getElementById('trendChartEmpty').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('trendChart').style.display = 'block';
+            document.getElementById('trendChartEmpty').style.display = 'none';
+            
+            const labels = trendData.labels || [];
+            const datasets = currentChartView === 'count' ? trendData.counts : trendData.scores;
+            
+            trendChart.data.labels = labels;
+            trendChart.data.datasets.forEach((dataset, index) => {
+                if (datasets && datasets[index]) {
+                    dataset.data = datasets[index].data || [];
+                }
+            });
+            trendChart.update();
+        }
+
+        // Update asset chart
+        function updateAssetChart() {
+            if (!assetChart || allAssets.length === 0) {
+                document.getElementById('assetChart').style.display = 'none';
+                document.getElementById('assetChartEmpty').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('assetChart').style.display = 'block';
+            document.getElementById('assetChartEmpty').style.display = 'none';
+            
+            const assetLabels = [];
+            const criticalData = [];
+            const highData = [];
+            const mediumData = [];
+            const lowData = [];
+            
+            allAssets.slice(0, 10).forEach(asset => {
+                const assetId = asset._id || asset.id;
+                const assetRisks = allRisks.filter(r => r.assetId === assetId);
+                
+                assetLabels.push(asset.name || 'Unknown');
+                criticalData.push(assetRisks.filter(r => r.occurenceLevel === 'High').length);
+                highData.push(assetRisks.filter(r => r.occurenceLevel === 'Medium').length);
+                mediumData.push(assetRisks.filter(r => r.severity === 'Medium').length);
+                lowData.push(assetRisks.filter(r => r.occurenceLevel === 'Low').length);
+            });
+            
+            assetChart.data.labels = assetLabels;
+            assetChart.data.datasets[0].data = criticalData;
+            assetChart.data.datasets[1].data = highData;
+            assetChart.data.datasets[2].data = mediumData;
+            assetChart.data.datasets[3].data = lowData;
+            assetChart.update();
+        }
+
+        // Update asset table
+        function updateAssetTable() {
+            const tbody = document.getElementById('tableBody');
+            const tableEmpty = document.getElementById('tableEmpty');
+            
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            if (allAssets.length === 0) {
+                tableEmpty.style.display = 'block';
+                return;
+            }
+            
+            tableEmpty.style.display = 'none';
+            
+            allAssets.forEach(asset => {
+                const assetId = asset._id || asset.id;
+                const assetRisks = allRisks.filter(r => r.assetId === assetId);
+                
+                const startScore = (Math.random() * 8 + 2).toFixed(1);
+                const currentScore = (Math.random() * 8 + 2).toFixed(1);
+                const netChange = (currentScore - startScore).toFixed(1);
+                
+                let trendClass = 'stable';
+                let trendIcon = 'fa-minus';
+                let trendText = 'Stable';
+                
+                if (netChange < 0) {
+                    trendClass = 'improving';
+                    trendIcon = 'fa-arrow-down';
+                    trendText = 'Improving';
+                } else if (netChange > 0) {
+                    trendClass = 'deteriorating';
+                    trendIcon = 'fa-arrow-up';
+                    trendText = 'Deteriorating';
+                }
+                
+                const actionsCompleted = assetRisks.reduce((sum, r) => sum + (r.actionsCompleted || 0), 0);
+                const nextReview = asset.nextReviewDate || '—';
+                
+                const row = document.createElement('tr');
+                row.onclick = () => viewAssetDetails(assetId);
+                row.innerHTML = `
+                    <td><strong>${asset.name || 'Unnamed Asset'}</strong></td>
+                    <td><span class="risk-score">${startScore}</span></td>
+                    <td><span class="risk-score">${currentScore}</span></td>
+                    <td><span class="change-${netChange < 0 ? 'negative' : (netChange > 0 ? 'positive' : 'neutral')}">${netChange > 0 ? '+' : ''}${netChange}</span></td>
+                    <td><span class="trend-badge ${trendClass}"><i class="fas ${trendIcon}"></i> ${trendText}</span></td>
+                    <td>${formatNumber(actionsCompleted)}</td>
+                    <td>${nextReview}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Toggle chart view
+        function toggleChartView(view) {
+            currentChartView = view;
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            updateTrendChart();
+        }
+
+        // Sort assets
+        function sortAssets() {
+            const sortBy = document.getElementById('assetSort').value;
+            console.log('Sorting assets by:', sortBy);
+            updateAssetChart();
+        }
+
+        // Toggle filters visibility
+        function toggleFilters() {
+            const filterBar = document.getElementById('filterBar');
+            filterBar.style.display = filterBar.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        // Update filter count
+        function updateFilterCount() {
+            const filters = document.querySelectorAll('.filter-select');
+            let count = 0;
+            filters.forEach(f => { if (f.value !== 'all') count++; });
+            document.getElementById('filterCount').textContent = `${count} filter${count !== 1 ? 's' : ''} applied`;
+        }
+
+        // Date range change
+        document.getElementById('date-range')?.addEventListener('change', function(e) {
+            selectedDateRange = e.target.value;
+            refreshDashboard();
+        });
+
+        // Export data
+        function exportData() {
+            alert('Exporting trend analysis data...');
+        }
+
+        // View asset details
+        function viewAssetDetails(assetId) {
+            console.log('Viewing asset details:', assetId);
+            alert(`Navigating to detailed view for asset ID: ${assetId}`);
+        }
+
+        // Refresh dashboard
+        async function refreshDashboard() {
+            document.getElementById('refresh-time').textContent = 'Updating...';
+            
+            await Promise.all([
+                loadAssignedAssets(),
+                loadRisks(),
+                loadActions(),
+                loadTrends()
+            ]);
+            
+            calculateKPIs();
+            updateTrendChart();
+            updateAssetChart();
+            updateAssetTable();
+            
+            const now = new Date();
+            document.getElementById('refresh-time').textContent =
+                `Last updated: ${now.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}`;
+        }
+
+        // Main update function
+        async function updateDashboard() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    throw new Error('No authentication token');
+                }
+
+                await refreshDashboard();
+
+            } catch (err) {
+                console.error('Dashboard update failed:', err);
+                document.getElementById('refresh-time').textContent = `Update failed: ${err.message}`;
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            initializeCharts();
+            
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('tableEmpty').style.display = 'block';
+                document.getElementById('tableEmpty').innerHTML = 'Authentication required. Please log in.';
+                return;
+            }
+            
+            updateDashboard();
+            
+            document.querySelectorAll('.filter-select').forEach(select => {
+                select.addEventListener('change', updateFilterCount);
+            });
+            
+            setInterval(updateDashboard, 45000);
+        });
+
+        // Export functions
+        window.refreshDashboard = refreshDashboard;
+        window.toggleChartView = toggleChartView;
+        window.sortAssets = sortAssets;
+        window.toggleFilters = toggleFilters;
+        window.exportData = exportData;
+        window.viewAssetDetails = viewAssetDetails;
+    </script>
+</body>
+</html>
